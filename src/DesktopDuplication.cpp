@@ -6,6 +6,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved
 
 #include <limits.h>
+#include <string>
 
 #include "DisplayManager.h"
 #include "DuplicationManager.h"
@@ -16,6 +17,10 @@
 // Globals
 //
 OUTPUTMANAGER OutMgr;
+
+// Diagnostics
+LONG old_time_ms;
+HWND CapturedWindowHandle;
 
 // Below are lists of errors expect from Dxgi API calls when a transition event like mode change, PnpStop, PnpStart
 // desktop switch, TDR or session disconnect/reconnect. In all these cases we want the application to clean up the threads that process
@@ -237,6 +242,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
     ShowWindow(WindowHandle, nCmdShow);
     UpdateWindow(WindowHandle);
+	CapturedWindowHandle = WindowHandle;
 
     THREADMANAGER ThreadMgr;
     RECT DeskBounds;
@@ -522,6 +528,16 @@ DWORD WINAPI DDProc(_In_ void* Param)
                 continue;
             }
         }
+
+		// Diagnostics
+		SYSTEMTIME time;
+		GetSystemTime(&time);
+		LONG time_ms = (time.wSecond * 1000) + time.wMilliseconds;
+		LONG diff = time_ms - old_time_ms;
+		std::string diffs = std::to_string(diff);
+		LPCSTR diffc = diffs.c_str();
+		old_time_ms = time_ms;
+		SetWindowTextA(CapturedWindowHandle, diffc);
 
         // We have a new frame so try and process it
         // Try to acquire keyed mutex in order to access shared surface
